@@ -1,6 +1,6 @@
 # environmental_claims
 
-This repo contains the code, dataset and models for our working paper paper [(Stammbach et al., 2022)](https://aclanthology.org/2021.fever-1.2.pdf)
+This repo contains the code, dataset and models for our working paper paper [(Stammbach et al., 2022)](https://arxiv.org/abs/2209.00507)
 
 ## Installation
 
