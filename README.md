@@ -18,8 +18,9 @@ pip install -r requirements.txt
 ClimateBERT fine-tuned on environmental claims (pytorch model) can be downloaded here:
 * [envclaim_climatebert](https://www.dropbox.com/s/nww9lyihnyh7119/envclaim_climatebert.zip?dl=0)
 
-We plan to host the model and dataset via huggingface transformers hub in the near future!
-
+We also host the dataset and model on huggingface
+* [huggingface dataset](https://huggingface.co/datasets/climatebert/environmental_claims)
+* [huggingface model](https://huggingface.co/climatebert/environmental-claims)
 ## Inference
 
 run inference script with sample data
