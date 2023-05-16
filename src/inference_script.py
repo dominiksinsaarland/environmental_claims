@@ -4,6 +4,7 @@ import argparse
 import json
 import torch
 from tqdm import tqdm
+import pandas as pd
 
 class SequenceClassificationDataset(Dataset):
 	def __init__(self, x, tokenizer):
@@ -22,8 +23,9 @@ class SequenceClassificationDataset(Dataset):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--model_name', type=str, default='envclaim-climatebert')
+	parser.add_argument('--model_name', type=str, default='climatebert-environmental-claims')
 	parser.add_argument('--outfile_name', type=str, default='environmental_claim_predictions.csv')
+	parser.add_argument('--filename', type=str, default="data/test.jsonl")
 	args = parser.parse_args()
 
 	device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -36,11 +38,19 @@ if __name__ == "__main__":
 
 	model = AutoModelForSequenceClassification.from_pretrained(args.model_name).to(device)
 
-	# load sample sentences to predict
+	# load sentences to predict
+	
 
-	with open("data/test.jsonl") as f:
-		sentences = [json.loads(i)["text"] for i in f]
-
+	if args.filename.endswith("jsonl"):
+		df = pd.read_json(args.filename, lines = True)
+		if "text" in df.columns:
+			sentences = df.text.tolist()
+		elif "sentences" in df.columns:
+			sentences = df.text.tolist()
+	elif args.filename.endswith(".txt"):
+		with open(args.filename) as f:
+			sentences = [i for i in f]
+				
 	predict_dataset = SequenceClassificationDataset(sentences, tokenizer)
 
 	outputs = []
@@ -54,7 +64,6 @@ if __name__ == "__main__":
 			probs.extend(logits.softmax(dim=1)[:,1].tolist())
 	
 	# save to outfile
-	import pandas as pd
 
 	df = pd.DataFrame(list(zip(sentences, outputs, probs)), columns=["sentence", "classification", "probability"])
 	df.to_csv(args.outfile_name, index=False)

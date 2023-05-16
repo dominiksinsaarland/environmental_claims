@@ -11,6 +11,17 @@ import os
 from torch.utils.data import Dataset, DataLoader
 from transformers import AdamW, get_linear_schedule_with_warmup
 from tqdm import tqdm
+from data_helpers import get_dataset_splits, round_float, get_cv_splits
+from sklearn import metrics
+
+def evaluate(gold, predictions):
+	# acc, pr, rc, f1
+	pr = round_float(metrics.precision_score(gold, predictions))
+	rc = round_float(metrics.recall_score(gold, predictions))
+	f1 = round_float(metrics.f1_score(gold, predictions))
+	acc = round_float(metrics.accuracy_score(gold, predictions))
+	return " & ".join((pr, rc, f1, acc))
+
 
 
 class SequenceClassificationDataset(Dataset):
@@ -93,30 +104,24 @@ def main(args):
 		tokenizer = AutoTokenizer.from_pretrained(model_name)
 	except:
 		tokenizer = AutoTokenizer.from_pretrained("roberta-base")
-	from data_helpers import get_dataset_splits, round_float
 
 
 	out_str = os.path.basename(model_name) + " & "
 
-	# train model
 	X_train, y_train, X_validation, y_validation, X_test, y_test = get_dataset_splits()
 	trainset = SequenceClassificationDataset(X_train, y_train, tokenizer)
 	devset = SequenceClassificationDataset(X_validation, y_validation, tokenizer)
 	model = train_model(trainset, model_name)
 
-	# evaluate dev set
+	# evaluate dev set	
 	targets, outputs, probs = evaluate_epoch(model, devset)
-	macro = round_float(f1_score(targets, outputs, average="macro", zero_division=0))
-	micro = round_float(f1_score(targets, outputs, average="micro", zero_division=0))
-	out_str += micro + " & " + macro + " & "
-
+	out_str += evaluate(targets, outputs) + " & "
+	
 	# evaluate test set
 	devset = SequenceClassificationDataset(X_test, y_test, tokenizer)
 	targets, outputs, probs = evaluate_epoch(model, devset)
 
-	macro = round_float(f1_score(targets, outputs, average="macro", zero_division=0))
-	micro = round_float(f1_score(targets, outputs, average="micro", zero_division=0))
-	out_str += micro + " & " + macro + " & "
+	out_str += evaluate(targets, outputs) + r" \\ "
 
 	print (out_str)
 	return model, tokenizer
@@ -144,7 +149,7 @@ if __name__ == "__main__":
 
 	if args.do_save:
 		model.save_pretrained(args.save_path)
-		tokenizer.save_pretrained(args.save_paths)
+		tokenizer.save_pretrained(args.save_path)
 
-	# python transformer_models.py --do_save
+	# python transformer_models.py --do_save --save_path climatebert-environmental-claims --model_name climatebert/distilroberta-base-climate-f
 
