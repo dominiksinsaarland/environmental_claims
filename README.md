@@ -1,6 +1,6 @@
 # environmental_claims
 
-This repo contains the code, dataset and models for our working paper paper [(Stammbach et al., 2022)](https://arxiv.org/abs/2209.00507)
+This repo contains the code, dataset and models for our ACL short paper [(Stammbach et al., 2023)](https://aclanthology.org/2023.acl-short.91/)
 
 ## Installation
 
