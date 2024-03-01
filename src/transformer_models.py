@@ -2,7 +2,7 @@ import json
 import random
 import argparse
 from sklearn.metrics import precision_recall_fscore_support, classification_report, f1_score
-
+from sklearn.model_selection import train_test_split, KFold
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 from transformers import BigBirdTokenizer, BigBirdForSequenceClassification, BigBirdConfig
@@ -13,6 +13,7 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 from tqdm import tqdm
 from data_helpers import get_dataset_splits, round_float, get_cv_splits
 from sklearn import metrics
+import numpy as np
 
 def evaluate(gold, predictions):
 	# acc, pr, rc, f1
@@ -108,6 +109,28 @@ def main(args):
 
 	out_str = os.path.basename(model_name) + " & "
 
+	# cross-validation
+	if args.do_cross_validation:
+		X_train, y_train, X_validation, y_validation, X_test, y_test = get_dataset_splits()
+		X = np.array(X_train + X_validation + X_test)
+		y = np.array(y_train + y_validation + y_test)
+		kf = KFold(n_splits=5, random_state=42, shuffle=True)	
+		y_true, y_pred = [], []
+		counter = 0
+		for train_index, test_index in kf.split(X):
+			print ("CV split ", counter)
+			counter += 1
+			X_train, X_test = X[train_index], X[test_index]
+			y_train, y_test = y[train_index], y[test_index]
+			trainset = SequenceClassificationDataset(X_train, y_train, tokenizer)
+			devset = SequenceClassificationDataset(X_test, y_test, tokenizer)
+
+			model = train_model(trainset, model_name)
+
+			targets, outputs, probs = evaluate_epoch(model, devset)
+			y_true.extend(targets)
+			y_pred.extend(outputs)
+		out_str += evaluate(y_true, y_pred) + " & "
 	X_train, y_train, X_validation, y_validation, X_test, y_test = get_dataset_splits()
 	trainset = SequenceClassificationDataset(X_train, y_train, tokenizer)
 	devset = SequenceClassificationDataset(X_validation, y_validation, tokenizer)
@@ -143,6 +166,7 @@ if __name__ == "__main__":
 	parser.add_argument("--only_prediction", default=None, type=str,
 		        help="Epsilon for Adam optimizer.")
 	parser.add_argument('--do_save', action='store_true')
+	parser.add_argument('--do_cross_validation', action='store_true')
 
 	args = parser.parse_args()
 	model, tokenizer = main(args)
@@ -151,5 +175,5 @@ if __name__ == "__main__":
 		model.save_pretrained(args.save_path)
 		tokenizer.save_pretrained(args.save_path)
 
-	# python transformer_models.py --do_save --save_path climatebert-environmental-claims --model_name climatebert/distilroberta-base-climate-f
+	# python src/transformer_models.py --do_save --save_path climatebert-environmental-claims --model_name climatebert/distilroberta-base-climate-f --do_cross_validation
 
